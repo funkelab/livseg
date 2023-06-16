@@ -1,4 +1,4 @@
-nartsort
+natsort
 numpy
 pillow
 tqdm
