@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 raw_data = "/Volumes/funkelab/livseg/data/crops/lobule1_central_crop.zarr"
 label_data = "/Volumes/funkelab/livseg/data/test.n5"
+print('hi')
 
 voxel_size = (198, 45, 45)
 voxel_size = gp.Coordinate(voxel_size)
