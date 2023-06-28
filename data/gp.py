@@ -94,7 +94,7 @@ request.add(pred_affs, output_size)
 
 # defining variables
 
-in_channels = 1,
+in_channels = 1
 num_fmaps = 16
 fmap_inc_factor = 2
 downsample_factors = [(2, 2, 2), (2, 2, 2)]
