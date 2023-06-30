@@ -1,13 +1,11 @@
 import gunpowder as gp
 import matplotlib.pyplot as plt
 import numpy as np
-
-#from funlib.learn.torch.models import UNet, ConvPass
+import torch
 from gunpowder.torch import Train
 from lsd.train.gp import AddLocalShapeDescriptor
-#from tqdm import tqdm
+from tqdm import tqdm
 from model import MtlsdModel, WeightedMSELoss
-import torch
 
 raw_data = "/Volumes/funkelab/livseg/data/crops/lobule1_central_crop.zarr"
 label_data = "/Volumes/funkelab/livseg/data/test.n5"
@@ -81,6 +79,10 @@ pipeline += gp.AddAffinities(
     affinities_mask=affs_weights
 )
 
+# stack
+num_rep = 8
+pipeline += gp.Stack(num_rep)
+
 request = gp.BatchRequest()
 
 request.add(raw, output_size)
@@ -114,6 +116,9 @@ model = MtlsdModel(
 
 loss = WeightedMSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+# adding the log
+log_dir = '/Volumes/funkelab/livseg/data/tensorboard summaries'
+log_every = 100
 
 pipeline += gp.Unsqueeze([raw])
 
@@ -135,7 +140,9 @@ train = Train(
         'affs_prediction': pred_affs,
         'affs_target': gt_affs,
         'affs_weights': affs_weights
-    }
+    },
+    log_dir=log_dir,
+    log_every=log_every
 )
 
 pipeline += train
@@ -148,3 +155,39 @@ print(f"batch returned: {batch}")
 plt.imshow(batch[raw].data[0])
 plt.show()
 plt.imshow(batch[label].data[0])
+
+# creating the snapshot
+dataset_names = {
+    pred_lsds: 'Predicted_Lsds',
+    gt_lsds: 'Ground_Truth_Lsds',
+    lsds_weights: 'Lsds_Weights',
+    pred_affs: 'Predicted_Affinities',
+    gt_affs: 'Ground_Truth_Affinities',
+    affs_weights: 'Affinities_Weights'
+}
+output_dir = '/Volumes/funkelab/livseg/data/snapshots folder'
+output_filename = 'Snapshot'
+every = 1000
+pipeline += gp.Snapshot(
+    dataset_names,
+    output_dir=output_dir,
+    output_filename=output_filename,
+    every=every,
+    additonal_request=None,
+    compression_type=None,
+    dataset_dtypes=None,
+    store_value_range=False
+)
+
+# TODO: fix the number of iterations
+iterations = 1
+
+with gp.build(pipeline):
+    progress = tqdm(range(iterations))
+    for i in progress:
+        batch = pipeline.request_batch(request)
+
+        start = request[label].roi.get_begin()/voxel_size
+        end = request[label].roi.get_end()/voxel_size
+    progress.set_description(f'Training iteration {i}')
+    pass
