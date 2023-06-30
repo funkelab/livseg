@@ -12,9 +12,11 @@ label_data = "/groups/funke/funkelab/livseg/data/test.n5"
 
 voxel_size = (198, 45, 45)
 voxel_size = gp.Coordinate(voxel_size)
-shape = (14, 64, 64)
+shape = (32, 64, 64)
 size = gp.Coordinate(shape)
-output_size = size*voxel_size
+
+output_shape = gp.Coordinate((12, 24, 24)) 
+output_size = output_shape*voxel_size
 
 raw = gp.ArrayKey('RAW')
 label = gp.ArrayKey('LABEL')
@@ -79,13 +81,15 @@ pipeline += gp.AddAffinities(
     affinities_mask=affs_weights
 )
 
+pipeline += gp.Unsqueeze([raw])
+
 # stack
 num_rep = 8
 pipeline += gp.Stack(num_rep)
 
 request = gp.BatchRequest()
 
-request.add(raw, output_size)
+request.add(raw, size*voxel_size)
 request.add(label, output_size)
 request.add(gt_lsds, output_size)
 request.add(lsds_weights, output_size)
@@ -99,7 +103,7 @@ request.add(pred_affs, output_size)
 in_channels = 1
 num_fmaps = 16
 fmap_inc_factor = 2
-downsample_factors = [(2, 2, 2), (2, 2, 2)]
+downsample_factors = [(1, 2, 2), (1, 2, 2)]
 num_levels = len(downsample_factors)+1
 kernel_size_down = [[(3, 3, 3), (3, 3, 3)]]*num_levels
 kernel_size_up = [[(3, 3, 3), (3, 3, 3)]]*(num_levels - 1)
@@ -122,8 +126,6 @@ optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 # adding the log
 log_dir = '/groups/funke/funkelab/livseg/data/tensorboard_summaries'
 log_every = 100
-
-pipeline += gp.Unsqueeze([raw])
 
 train = Train(
     model,
@@ -153,11 +155,11 @@ pipeline += train
 with gp.build(pipeline):
     batch = pipeline.request_batch(request)
 
-print(f"batch returned: {batch}")
+# print(f"batch returned: {batch}")
 
-plt.imshow(batch[raw].data[0])
-plt.show()
-plt.imshow(batch[label].data[0])
+# plt.imshow(batch[raw].data[0])
+# plt.show()
+# plt.imshow(batch[label].data[0])
 
 # creating the snapshot
 dataset_names = {
@@ -176,14 +178,14 @@ pipeline += gp.Snapshot(
     output_dir=output_dir,
     output_filename=output_filename,
     every=every,
-    additonal_request=None,
+    additional_request=None,
     compression_type=None,
     dataset_dtypes=None,
     store_value_range=False
 )
 
 # TODO: fix the number of iterations
-iterations = 1
+iterations = 10000
 
 with gp.build(pipeline):
     progress = tqdm(range(iterations))
