@@ -7,12 +7,12 @@ from lsd.train.gp import AddLocalShapeDescriptor
 from tqdm import tqdm
 from model import MtlsdModel, WeightedMSELoss
 
-raw_data = "/Volumes/funkelab/livseg/data/crops/lobule1_central_crop.zarr"
-label_data = "/Volumes/funkelab/livseg/data/test.n5"
+raw_data = "/groups/funke/funkelab/livseg/data/crops/lobule1_central_crop.zarr"
+label_data = "/groups/funke/funkelab/livseg/data/test.n5"
 
 voxel_size = (198, 45, 45)
 voxel_size = gp.Coordinate(voxel_size)
-shape = (64, 64, 64)
+shape = (14, 64, 64)
 size = gp.Coordinate(shape)
 output_size = size*voxel_size
 
@@ -79,6 +79,8 @@ pipeline += gp.AddAffinities(
     affinities_mask=affs_weights
 )
 
+pipeline += gp.Unsqueeze([raw])
+
 # stack
 num_rep = 8
 pipeline += gp.Stack(num_rep)
@@ -99,9 +101,10 @@ request.add(pred_affs, output_size)
 in_channels = 1
 num_fmaps = 16
 fmap_inc_factor = 2
-downsample_factors = [(2, 2, 2), (2, 2, 2)]
-# kernel_size_down =
-# kernel_size_up =
+downsample_factors = [(1, 2, 2), (1, 2, 2)]
+num_levels = len(downsample_factors)
+kernel_size_down = [[(3, 3, 3), (3, 3, 3)]]*num_levels
+kernel_size_up = [[(3, 3, 3), (3, 3, 3)]]*(num_levels-1)
 constant_upsample = True
 
 lr = 1e-5
@@ -111,16 +114,16 @@ model = MtlsdModel(
     num_fmaps=num_fmaps,
     fmap_inc_factor=fmap_inc_factor,
     downsample_factors=downsample_factors,
+    kernel_size_down=kernel_size_down,
+    kernel_size_up=kernel_size_up,
     constant_upsample=constant_upsample
 )
 
 loss = WeightedMSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 # adding the log
-log_dir = '/Volumes/funkelab/livseg/data/tensorboard summaries'
+log_dir = '/groups/funke/funkelab/livseg/data/tensorboard_summaries'
 log_every = 100
-
-pipeline += gp.Unsqueeze([raw])
 
 train = Train(
     model,
@@ -165,7 +168,7 @@ dataset_names = {
     gt_affs: 'Ground_Truth_Affinities',
     affs_weights: 'Affinities_Weights'
 }
-output_dir = '/Volumes/funkelab/livseg/data/snapshots folder'
+output_dir = '/groups/funke/funkelab/livseg/data/snapshots_folder'
 output_filename = 'Snapshot'
 every = 1000
 pipeline += gp.Snapshot(
@@ -180,7 +183,7 @@ pipeline += gp.Snapshot(
 )
 
 # TODO: fix the number of iterations
-iterations = 1
+iterations = 10000
 
 with gp.build(pipeline):
     progress = tqdm(range(iterations))
