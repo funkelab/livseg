@@ -1,0 +1,33 @@
+# https://peps.python.org/pep-0517/
+# https://hatch.pypa.io/latest/config/build/
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# https://peps.python.org/pep-0621/
+[project]
+name = "livseg"
+description = "Instance segmentation of cell organelles in liver samples."
+readme = "README.md"
+license = { text = "MIT" }
+version = "0.1"
+authors = [
+    { name = 'Ananya Sista', email = 'ananya.sista@gmail.com' },
+]
+dependencies = [
+    'natsort',
+    'numpy',
+    'pillow',
+    'tqdm',
+    'zarr',
+    'gunpowder',
+    'torch',
+    'lsds@git+https://github.com/funkelab/lsd.git',
+    'funlib.learn.torch@git+https://github.com/funkelab/funlib.learn.torch.git',
+    'matplotlib',
+    'tensorboard',
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
