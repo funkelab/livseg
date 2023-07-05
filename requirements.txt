@@ -1,5 +1,0 @@
-natsort
-numpy
-pillow
-tqdm
-zarr
