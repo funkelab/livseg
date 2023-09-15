@@ -41,8 +41,9 @@ if __name__ == "__main__":
 
     print("Searching for channel files...")
 
-   #  dapi_filenames = [filename for filename in source_directory.iterdir() if filename.is_file()]
-    other_channel_filenames = [filename for filename in path.iterdir() if filename.is_file()]
+    dapi_filenames = [filename for filename in source_directory.iterdir() if filename.is_file()]
+    other_channel_filenames = [
+        filename for filename in path.iterdir() if filename.is_file()]
 
     print("Separating other channels...")
 
@@ -64,8 +65,8 @@ if __name__ == "__main__":
     print("reading/writing files")
 
     for channel_filenames, dsname in zip(
-            [c3_filenames],
-            ["c3"]
+            [dapi_filenames, c0_filenames, c1_filenames, c2_filenames, c3_filenames],
+            ["dapi", "c0", "c1", "c2", "c3"]
     ):
 
         print("obtaining meta data")
