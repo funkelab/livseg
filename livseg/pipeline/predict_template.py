@@ -9,27 +9,6 @@ from scipy.ndimage.filters import maximum_filter
 from scipy.ndimage.morphology import distance_transform_edt
 from skimage.segmentation import watershed
 
-raw_data = "/groups/funke/funkelab/livseg/data/crops.zarr/bigger_portal_vein_crop.zarr"
-raw_file = 'raw'
-checkpoint = "/groups/funke/funkelab/livseg/experiments/20230801_more_training/model_checkpoint_100000"
-
-# directory for predictions -- Raw Pred_LSDS Pred_AFFS
-target_dir = "/groups/funke/funkelab/livseg/experiments/20230801_more_training/predictions"
-output_file = "portal_crop.zarr"
-
-# directory for 3d segmentations post processing
-target_dir2 = "/groups/funke/funkelab/livseg/experiments/20230801_more_training/fragments.zarr"
-
-zarrfile = zarr.open(raw_data + "/raw", "r")
-offset = zarrfile.attrs["offset"]
-
-voxel_size = gp.Coordinate((198, 45, 45))
-size = gp.Coordinate((32, 64, 64))
-output_shape = gp.Coordinate((12, 24, 24))
-
-input_size = size*voxel_size
-output_size = output_shape*voxel_size
-
 def predict(checkpoint, raw_data, raw_file):
     raw = gp.ArrayKey("RAW")
     pred_lsds = gp.ArrayKey('PRED_LSDS')
@@ -149,7 +128,6 @@ def predict(checkpoint, raw_data, raw_file):
     
     return batch[raw].data, batch[pred_lsds].data, batch[pred_affs].data
 
-raw, pred_lsds, pred_affs = predict(checkpoint, raw_data, raw_file)
 
 def watershed_from_boundary_distance(
         
@@ -214,22 +192,52 @@ def get_segmentation(affinities, threshold):
 
     return segmentation
 
-# TODO: use all 3 dimensions (change line 219)
-ws_affs = np.stack([
-    np.zeros_like(pred_affs[0]),
-    pred_affs[0],
-    pred_affs[1]]
-)
+if __name__ == "__main__":
+    #################
+    # CONFIGURATION #
+    #################
+    raw_data = "/groups/funke/funkelab/livseg/data/crops.zarr/bigger_portal_vein_crop.zarr"
+    raw_file = 'raw'
+    checkpoint = "/groups/funke/funkelab/livseg/experiments/20230801_more_training/model_checkpoint_100000"
 
-threshold = 0.9
+    # directory for predictions -- Raw Pred_LSDS Pred_AFFS
+    target_dir = "/groups/funke/funkelab/livseg/experiments/20230801_more_training/predictions"
+    output_file = "portal_crop.zarr"
 
-segmentation = get_segmentation(ws_affs, threshold)
+    # directory for 3d segmentations post processing
+    target_dir2 = "/groups/funke/funkelab/livseg/experiments/20230801_more_training/fragments.zarr"
 
-zarr_file = zarr.open(target_dir2, 'w')
+    zarrfile = zarr.open(raw_data + "/raw", "r")
+    offset = zarrfile.attrs["offset"]
 
-zarr_file['segmentation'] = segmentation
+    voxel_size = gp.Coordinate((198, 45, 45))
+    size = gp.Coordinate((32, 64, 64))
+    output_shape = gp.Coordinate((12, 24, 24))
 
-# TODO: make voxel size a tuple
-zarr_file['segmentation'].attrs['resolution'] = (198, 45, 45)
+    input_size = size*voxel_size
+    output_size = output_shape*voxel_size
 
-zarr_file['segmentation'].attrs['offset'] = offset
+    #####################
+    # ACTUAL Prediction # 
+    #####################
+    raw, pred_lsds, pred_affs = predict(checkpoint, raw_data, raw_file)
+
+    ws_affs = np.stack([
+        np.zeros_like(pred_affs[0]),  # TODO use all three dimensions
+        pred_affs[0],
+        pred_affs[1]]
+    )
+
+
+    # TODO Block-wise post processing
+    threshold = 0.9
+
+    segmentation = get_segmentation(ws_affs, threshold)
+
+    zarr_file = zarr.open(target_dir2, 'w')
+
+    zarr_file['segmentation'] = segmentation
+
+    # TODO: make voxel size a tuple
+    zarr_file['segmentation'].attrs['resolution'] = (198, 45, 45)
+    zarr_file['segmentation'].attrs['offset'] = offset
